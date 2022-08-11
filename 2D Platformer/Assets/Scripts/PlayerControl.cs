@@ -4,31 +4,49 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class PlayerControl : MonoBehaviour
-{
-    public float moveSpeed;
-    public float jumpForce;
-    public Rigidbody2D playerRB;
+{   
+    private Vector2 moveDirection = Vector2.zero;
     public Controls controls;
-    public float jumpDownForce;
+    private InputAction move;
+    private InputAction jump;
+    private InputAction grab;
 
-    public float coyoteTime;
+    [SerializeField] private bool isGrounded,isOnWall;
     private float coyoteCounter;
-
-    public float jumpBufferLength;
     private float jumpBufferCounter;
-
-    private bool isGrounded;
-    public Transform groundCheckPoint;
-    public LayerMask whatIsGround;
-
     private bool canDoubleJump;
+    [SerializeField] private bool isWallSliding;
+    
 
     private Animator anim;
     private SpriteRenderer playerSR;
+    
+    [Header("Basic")]
+    public float moveSpeed;
+    public float jumpForce;
+    public float doubleJumpForce;
 
-    Vector2 moveDirection = Vector2.zero;
-    private InputAction move;
-    private InputAction jump;
+    [Header("Advanced")]
+    public float groundCheckOffset;
+    public float wallLeftCheckOffset;
+    public float wallRightCheckOffset;
+    public float coyoteTime;
+    public float jumpBufferLength;
+    public float smallJumpForce;
+    public float gravityMultiplier;
+    public float slideSpeed;   
+
+    [Header("Wall Jumping")]
+    public float wallJumpTime;
+    public Vector2 wallJumpForce;
+    private bool wallJumping;
+
+    [Header("References")]
+    public Transform groundCheckPoint;
+    public Transform wallLeftCheckPoint;
+    public Transform wallRightCheckPoint;
+    public LayerMask whatIsGround;
+    public Rigidbody2D playerRB;
     private void Awake()
     {
         controls = new Controls();
@@ -37,15 +55,22 @@ public class PlayerControl : MonoBehaviour
     {
         move = controls.Main.Move;
         move.Enable();
+
         jump = controls.Main.Jump;
         jump.Enable();
         jump.performed += Jump;
         jump.canceled += Jump;
+
+        grab = controls.Main.Grab;
+        grab.Enable();
+        grab.performed += Grab;
+        grab.canceled += Grab;
     }
     private void OnDisable() 
     {
         move.Disable();
         jump.Disable();
+        grab.Disable();
     }
     void Start()
     {
@@ -57,8 +82,11 @@ public class PlayerControl : MonoBehaviour
         //saða sola hareket
         moveDirection = move.ReadValue<Vector2>();
         playerRB.velocity = new Vector2(moveSpeed* moveDirection.x, playerRB.velocity.y);
+
         //zemin tespiti
-        isGrounded = Physics2D.OverlapCircle(groundCheckPoint.position, .2f, whatIsGround);
+        isGrounded = Physics2D.OverlapCircle(groundCheckPoint.position, groundCheckOffset, whatIsGround);
+        isOnWall = Physics2D.OverlapCircle(wallLeftCheckPoint.position, wallLeftCheckOffset, whatIsGround)
+            || Physics2D.OverlapCircle(wallRightCheckPoint.position, wallRightCheckOffset, whatIsGround);
         //coyote time
         if (isGrounded)
         {
@@ -68,12 +96,33 @@ public class PlayerControl : MonoBehaviour
         {
             coyoteCounter -= Time.deltaTime;
         }
-        
-
+        //hýzlý düþme
+        if (playerRB.velocity.y < 0)
+        {
+            playerRB.velocity += Vector2.up * Physics2D.gravity.y * (gravityMultiplier - 1) * Time.deltaTime;
+        }
         //double jump boolean
         if (isGrounded)
         {
             canDoubleJump = true;
+        }        
+        //wall slide
+        if(isOnWall && !isGrounded && moveDirection.x !=0)
+        {
+            isWallSliding = true;
+        }
+        else
+        {
+            isWallSliding = false;
+        }
+        if (isWallSliding)
+        {
+            playerRB.velocity = new Vector2(playerRB.velocity.x,-slideSpeed);
+        }
+        //wall jump
+        if (wallJumping)
+        {
+            playerRB.velocity = new Vector2(wallJumpForce.x * -moveDirection.x, wallJumpForce.y);
         }
         //animasyon
         anim.SetBool("isGrounded", isGrounded);
@@ -89,7 +138,7 @@ public class PlayerControl : MonoBehaviour
         }
     }
     //input sisteminden gelen zýplama eylemi
-    private void Jump(InputAction.CallbackContext context)//CONTEXTI JUMP YAP
+     private void Jump(InputAction.CallbackContext context)//CONTEXTI JUMP YAP
     {
         if (context.performed)
         {
@@ -101,31 +150,46 @@ public class PlayerControl : MonoBehaviour
         }
         //zýplama ve sonsuz zýplamayý önleme
         if (jumpBufferCounter >=0 && coyoteCounter > 0f)
-        {        
-                playerRB.velocity = new Vector2(playerRB.velocity.x, jumpForce);
+        {            
+            playerRB.velocity = new Vector2(playerRB.velocity.x, jumpForce);
             jumpBufferCounter = 0;
         }        
         else if(context.performed)
         {
-            //double jump
-            if (canDoubleJump)
-            {
-                playerRB.velocity = new Vector2(playerRB.velocity.x, jumpForce);
-                canDoubleJump = false;
-            }
+            doubleJump();
         }
         //tuþtan elini çekince az zýplama
         if (context.canceled && playerRB.velocity.y > 0)
         {
-            playerRB.velocity = new Vector2(playerRB.velocity.x, playerRB.velocity.y * jumpDownForce);
+            playerRB.velocity = new Vector2(playerRB.velocity.x, playerRB.velocity.y * smallJumpForce);
         }
         else if(context.canceled)
         {
-            if (canDoubleJump)
-            {
-                playerRB.velocity = new Vector2(playerRB.velocity.x, jumpForce);
-                canDoubleJump = false;
-            }
-        }             
+            doubleJump();
+        }
+        if(context.performed && isWallSliding)
+        {
+            wallJumping = true;
+            Invoke("setWallJumpFalse", wallJumpTime);
+        }
+    }
+    public void doubleJump()
+    {
+        if (canDoubleJump)
+        {
+            playerRB.velocity = new Vector2(playerRB.velocity.x, jumpForce * doubleJumpForce);
+            canDoubleJump = false;
+        }
+    }
+    public void setWallJumpFalse()
+    {
+        wallJumping = false;
+    }
+    private void Grab(InputAction.CallbackContext context)
+    {
+        if(context.performed )
+        {
+            Debug.Log("ZZZZZZZ");
+        }
     }
 }
