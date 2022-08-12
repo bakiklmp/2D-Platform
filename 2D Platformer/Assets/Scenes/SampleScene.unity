@@ -697,8 +697,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isGrounded: 0
-  isOnWall: 0
+  isOnWallLeft: 0
+  isOnWallRight: 0
   isWallSliding: 0
+  isGrabbing: 0
   moveSpeed: 7
   jumpForce: 7
   doubleJumpForce: 1.3
@@ -710,8 +712,7 @@ MonoBehaviour:
   smallJumpForce: 0.7
   gravityMultiplier: 2.5
   slideSpeed: 4
-  wallJumpTime: 2
-  wallJumpForce: {x: 3, y: 3}
+  wallJumpTime: 1
   groundCheckPoint: {fileID: 1686323095}
   wallLeftCheckPoint: {fileID: 1981826540}
   wallRightCheckPoint: {fileID: 1415031762}

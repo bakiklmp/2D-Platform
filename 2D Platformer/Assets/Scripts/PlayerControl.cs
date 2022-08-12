@@ -6,21 +6,28 @@ using UnityEngine.InputSystem;
 public class PlayerControl : MonoBehaviour
 {   
     private Vector2 moveDirection = Vector2.zero;
+    private float grabValue;
+    private float jumpValue;
     public Controls controls;
     private InputAction move;
     private InputAction jump;
     private InputAction grab;
 
-    [SerializeField] private bool isGrounded,isOnWall;
     private float coyoteCounter;
     private float jumpBufferCounter;
     private bool canDoubleJump;
-    [SerializeField] private bool isWallSliding;
+    private float gravityStore;
     
-
     private Animator anim;
     private SpriteRenderer playerSR;
-    
+
+    [Header("Checks")]
+    [SerializeField] private bool isGrounded;
+    [SerializeField] private bool isOnWallLeft;
+    [SerializeField] private bool isOnWallRight;
+    [SerializeField] private bool isWallSliding;
+    [SerializeField] private bool isGrabbing;
+
     [Header("Basic")]
     public float moveSpeed;
     public float jumpForce;
@@ -34,12 +41,11 @@ public class PlayerControl : MonoBehaviour
     public float jumpBufferLength;
     public float smallJumpForce;
     public float gravityMultiplier;
-    public float slideSpeed;   
+    public float slideSpeed;
 
-    [Header("Wall Jumping")]
-    public float wallJumpTime;
-    public Vector2 wallJumpForce;
-    private bool wallJumping;
+    [Header("Wall Jump")]
+    public float wallJumpTime = 0.1f;
+    private float wallJumpCounter;
 
     [Header("References")]
     public Transform groundCheckPoint;
@@ -76,78 +82,85 @@ public class PlayerControl : MonoBehaviour
     {
         anim = GetComponent<Animator>();
         playerSR = GetComponent<SpriteRenderer>();
+        gravityStore = playerRB.gravityScale;
+        
     }
     void Update()
     {
-        //saða sola hareket
-        moveDirection = move.ReadValue<Vector2>();
-        playerRB.velocity = new Vector2(moveSpeed* moveDirection.x, playerRB.velocity.y);
-
-        //zemin tespiti
-        isGrounded = Physics2D.OverlapCircle(groundCheckPoint.position, groundCheckOffset, whatIsGround);
-        isOnWall = Physics2D.OverlapCircle(wallLeftCheckPoint.position, wallLeftCheckOffset, whatIsGround)
-            || Physics2D.OverlapCircle(wallRightCheckPoint.position, wallRightCheckOffset, whatIsGround);
-        //coyote time
-        if (isGrounded)
+        if (wallJumpCounter <= 0)
         {
-            coyoteCounter = coyoteTime;
+            //saða sola hareket
+            grabValue = grab.ReadValue<float>();//basýlýyorsa 1 basýlmýyorsa 0
+            jumpValue = jump.ReadValue<float>();
+            moveDirection = move.ReadValue<Vector2>();
+            playerRB.velocity = new Vector2(moveSpeed * moveDirection.x, playerRB.velocity.y);
+            //zemin tespiti
+            isGrounded = Physics2D.OverlapCircle(groundCheckPoint.position, groundCheckOffset, whatIsGround);
+            isOnWallLeft = Physics2D.OverlapCircle(wallLeftCheckPoint.position, wallLeftCheckOffset, whatIsGround);
+            isOnWallRight = Physics2D.OverlapCircle(wallRightCheckPoint.position, wallRightCheckOffset, whatIsGround);
+            //coyote time
+            if (isGrounded)
+            {
+                coyoteCounter = coyoteTime;
+            }
+            else
+            {
+                coyoteCounter -= Time.deltaTime;
+            }
+            //hýzlý düþme
+            if (playerRB.velocity.y < 0)
+            {
+                playerRB.velocity += Vector2.up * Physics2D.gravity.y * (gravityMultiplier - 1) * Time.deltaTime;
+            }
+            //double jump boolean
+            if (isGrounded)
+            {
+                canDoubleJump = true;
+            }
+            //wall slide
+            if ((isOnWallLeft||isOnWallRight) && !isGrounded)
+            {
+                isWallSliding = true;
+            }
+            else
+            {
+                isWallSliding = false;
+            }
+            if (isWallSliding)
+            {
+                playerRB.velocity = new Vector2(playerRB.velocity.x, -slideSpeed);
+            }
+            wallGrab();
+            //animasyon
+            anim.SetBool("isGrounded", isGrounded);
+            anim.SetFloat("moveSpeed", Mathf.Abs(playerRB.velocity.x));
+
+            //karakterin baktýðý yöne dönmesi
+            if (playerRB.velocity.x < 0)
+            {
+                playerSR.flipX = true;
+            }
+            else if (playerRB.velocity.x > 0)
+            {
+                playerSR.flipX = false;
+            }
         }
         else
         {
-            coyoteCounter -= Time.deltaTime;
-        }
-        //hýzlý düþme
-        if (playerRB.velocity.y < 0)
-        {
-            playerRB.velocity += Vector2.up * Physics2D.gravity.y * (gravityMultiplier - 1) * Time.deltaTime;
-        }
-        //double jump boolean
-        if (isGrounded)
-        {
-            canDoubleJump = true;
-        }        
-        //wall slide
-        if(isOnWall && !isGrounded && moveDirection.x !=0)
-        {
-            isWallSliding = true;
-        }
-        else
-        {
-            isWallSliding = false;
-        }
-        if (isWallSliding)
-        {
-            playerRB.velocity = new Vector2(playerRB.velocity.x,-slideSpeed);
-        }
-        //wall jump
-        if (wallJumping)
-        {
-            playerRB.velocity = new Vector2(wallJumpForce.x * -moveDirection.x, wallJumpForce.y);
-        }
-        //animasyon
-        anim.SetBool("isGrounded", isGrounded);
-        anim.SetFloat("moveSpeed",Mathf.Abs(playerRB.velocity.x));
-
-        //karakterin baktýðý yöne dönmesi
-        if (playerRB.velocity.x < 0)
-        {
-            playerSR.flipX = true;
-        }else if(playerRB.velocity.x > 0)
-        {
-            playerSR.flipX = false;
-        }
+            wallJumpCounter -= Time.deltaTime;
+        }   
     }
     //input sisteminden gelen zýplama eylemi
-     private void Jump(InputAction.CallbackContext context)//CONTEXTI JUMP YAP
+     public void Jump(InputAction.CallbackContext context)//CONTEXTI JUMP YAP
     {
-        if (context.performed)
+        if(context.performed)
         {
             jumpBufferCounter = jumpBufferLength;
         }
         else
         {
             jumpBufferCounter -= Time.deltaTime;
-        }
+        }       
         //zýplama ve sonsuz zýplamayý önleme
         if (jumpBufferCounter >=0 && coyoteCounter > 0f)
         {            
@@ -157,21 +170,16 @@ public class PlayerControl : MonoBehaviour
         else if(context.performed)
         {
             doubleJump();
-        }
+        }              
         //tuþtan elini çekince az zýplama
         if (context.canceled && playerRB.velocity.y > 0)
         {
-            playerRB.velocity = new Vector2(playerRB.velocity.x, playerRB.velocity.y * smallJumpForce);
+            
         }
         else if(context.canceled)
         {
             doubleJump();
-        }
-        if(context.performed && isWallSliding)
-        {
-            wallJumping = true;
-            Invoke("setWallJumpFalse", wallJumpTime);
-        }
+        }       
     }
     public void doubleJump()
     {
@@ -181,15 +189,47 @@ public class PlayerControl : MonoBehaviour
             canDoubleJump = false;
         }
     }
-    public void setWallJumpFalse()
+    private void wallGrab()
     {
-        wallJumping = false;
-    }
-    private void Grab(InputAction.CallbackContext context)
-    {
-        if(context.performed )
+        //wall grab
+        if (isGrabbing)
         {
-            Debug.Log("ZZZZZZZ");
+            playerRB.gravityScale = 0f;
+            playerRB.velocity = Vector2.zero;
+            if (jumpValue==1)
+            {
+                wallJumpCounter = wallJumpTime;
+                if (isOnWallRight)
+                {
+                    playerRB.velocity = new Vector2(-moveSpeed, jumpForce);
+                    playerRB.gravityScale = gravityStore;
+                    isGrabbing = false;
+
+                }
+                else if (isOnWallLeft)
+                {
+                    playerRB.velocity = new Vector2(moveSpeed, jumpForce);
+                    playerRB.gravityScale = gravityStore;
+                    isGrabbing = false;
+                    doubleJump();
+                }
+            }
+        }
+        else
+        {
+            playerRB.gravityScale = gravityStore;
         }
     }
+    private void Grab(InputAction.CallbackContext context)
+    {        
+            if (context.performed && (isOnWallLeft || isOnWallRight) && !isGrounded)
+            {
+                isGrabbing = true;
+            }
+            else
+            {
+                isGrabbing = false;
+            }        
+    }
+ 
 }
