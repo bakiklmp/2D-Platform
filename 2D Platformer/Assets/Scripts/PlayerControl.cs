@@ -8,10 +8,12 @@ public class PlayerControl : MonoBehaviour
     private Vector2 moveDirection = Vector2.zero;
     private float grabValue;
     private float jumpValue;
+    private float dashValue;
     public Controls controls;
     private InputAction move;
     private InputAction jump;
     private InputAction grab;
+    private InputAction dash;
 
     private float coyoteCounter;
     private float jumpBufferCounter;
@@ -27,6 +29,14 @@ public class PlayerControl : MonoBehaviour
     [SerializeField] private bool isOnWallRight;
     [SerializeField] private bool isWallSliding;
     [SerializeField] private bool isGrabbing;
+
+    [Header("Dashing")]
+    [SerializeField] private bool isDashing;
+    private bool canDash = true;    
+    public float dashPower = 10;
+    public float dashTime;
+    public float dashCooldown;
+
 
     [Header("Basic")]
     public float moveSpeed;
@@ -71,27 +81,36 @@ public class PlayerControl : MonoBehaviour
         grab.Enable();
         grab.performed += Grab;
         grab.canceled += Grab;
+
+        dash = controls.Main.Dash;
+        dash.Enable();
+        dash.performed += _ => Dash();
     }
     private void OnDisable() 
     {
         move.Disable();
         jump.Disable();
         grab.Disable();
+        dash.Disable();
     }
     void Start()
     {
         anim = GetComponent<Animator>();
         playerSR = GetComponent<SpriteRenderer>();
-        gravityStore = playerRB.gravityScale;
-        
+        gravityStore = playerRB.gravityScale;        
     }
     void Update()
     {
+        if (isDashing)
+        {
+            return;
+        }
         if (wallJumpCounter <= 0)
         {
             //saða sola hareket
             grabValue = grab.ReadValue<float>();//basýlýyorsa 1 basýlmýyorsa 0
             jumpValue = jump.ReadValue<float>();
+            dashValue = dash.ReadValue<float>();
             moveDirection = move.ReadValue<Vector2>();
             playerRB.velocity = new Vector2(moveSpeed * moveDirection.x, playerRB.velocity.y);
             //zemin tespiti
@@ -135,7 +154,6 @@ public class PlayerControl : MonoBehaviour
             anim.SetBool("isGrounded", isGrounded);
             anim.SetFloat("moveSpeed", Mathf.Abs(playerRB.velocity.x));
 
-            //karakterin baktýðý yöne dönmesi
             if (playerRB.velocity.x < 0)
             {
                 playerSR.flipX = true;
@@ -219,6 +237,35 @@ public class PlayerControl : MonoBehaviour
         {
             playerRB.gravityScale = gravityStore;
         }
+    }
+
+    private void Dash()
+    {
+        StartCoroutine(Dashing());
+    }
+    private IEnumerator Dashing()
+    {
+
+        canDash = false;
+        isDashing = true;
+        playerRB.gravityScale = 0;
+        if(moveDirection.x != 0 && moveDirection.y != 0)
+        {
+            playerRB.velocity = new Vector2(moveDirection.x * dashPower, moveDirection.y * dashPower);
+        }else if(moveDirection.x != 0)
+        {
+            playerRB.velocity = new Vector2(moveDirection.x * dashPower, 0f);
+        }else if(moveDirection.y != 0)
+        {
+            playerRB.velocity = new Vector2(0f, moveDirection.y * dashPower);
+            playerRB.gravityScale = gravityStore;
+        }        
+        yield return new WaitForSeconds(dashTime);
+        playerRB.gravityScale = gravityStore;
+        isDashing = false;
+        yield return new WaitForSeconds(dashCooldown);
+        canDash = true;
+
     }
     private void Grab(InputAction.CallbackContext context)
     {        
