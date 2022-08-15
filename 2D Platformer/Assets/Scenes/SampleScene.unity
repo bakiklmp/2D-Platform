@@ -338,7 +338,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 82573675}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 6.1146283, y: -1.6259007, z: 0}
+  m_LocalPosition: {x: 5.53, y: -2.02, z: 0}
   m_LocalScale: {x: 5.040922, y: 0.14606266, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -449,7 +449,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 137612750}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -16.34, y: 0.41, z: 0}
+  m_LocalPosition: {x: -11.53, y: 0.47, z: 0}
   m_LocalScale: {x: 2.2921073, y: 10.761319, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -702,21 +702,26 @@ MonoBehaviour:
   isWallSliding: 0
   isGrabbing: 0
   isDashing: 0
-  dashPower: 12
-  dashTime: 0.5
-  dashCooldown: 1
+  isWallJumping: 0
   moveSpeed: 7
-  jumpForce: 7
+  jumpForce: 10
   doubleJumpForce: 1.3
-  groundCheckOffset: 0.2
-  wallLeftCheckOffset: 0.2
-  wallRightCheckOffset: 0.2
+  doubleJumpAbility: 1
   coyoteTime: 0.2
   jumpBufferLength: 0.7
   smallJumpForce: 0.7
   gravityMultiplier: 2.5
+  dashPower: 12
+  dashTime: 0.5
+  dashCooldown: 1
+  canDash: 1
+  groundCheckOffset: 0.2
+  wallLeftCheckOffset: 0.2
+  wallRightCheckOffset: 0.2
   slideSpeed: 4
-  wallJumpTime: 1
+  climbSpeed: 6
+  canWallJumping: 1
+  wallJumpTime: 0.3
   groundCheckPoint: {fileID: 1686323095}
   wallLeftCheckPoint: {fileID: 1981826540}
   wallRightCheckPoint: {fileID: 1415031762}
@@ -910,7 +915,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1977057168}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 15.05, y: 0.35, z: 0}
+  m_LocalPosition: {x: 12.45, y: 0.34, z: 0}
   m_LocalScale: {x: 2.2921073, y: 10.761319, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

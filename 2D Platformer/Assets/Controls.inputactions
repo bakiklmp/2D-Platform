@@ -176,7 +176,7 @@
                 {
                     "name": "down",
                     "id": "c601e59b-99b2-4d47-a5e9-eb23ebc70cb4",
-                    "path": "<Keyboard>/a",
+                    "path": "<Keyboard>/s",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard",
@@ -207,7 +207,7 @@
                     "isPartOfComposite": true
                 },
                 {
-                    "name": "2D Vector",
+                    "name": "Gamepad Movement",
                     "id": "273d7159-0c5c-4130-b4c7-2e59bbf7b1a6",
                     "path": "2DVector(mode=2)",
                     "interactions": "",
