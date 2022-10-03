@@ -231,7 +231,7 @@ public partial class @Controls : IInputActionCollection2, IDisposable
                 {
                     ""name"": ""Gamepad Movement"",
                     ""id"": ""273d7159-0c5c-4130-b4c7-2e59bbf7b1a6"",
-                    ""path"": ""2DVector(mode=2)"",
+                    ""path"": ""2DVector"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
